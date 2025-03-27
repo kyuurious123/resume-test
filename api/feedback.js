@@ -3,13 +3,11 @@ import formidable from "formidable";
 import fs from "fs";
 import pdfParse from "pdf-parse";
 
-// GPT API 설정
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
-// Vercel API Route 기본 export 방식
 export const config = {
   api: {
     bodyParser: false,
@@ -17,15 +15,15 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-    res.setHeader("Access-Control-Allow-Origin", "*")
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  // ✅ CORS 설정 추가
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    // Preflight 요청 처리
-    if (req.method === "OPTIONS") {
-    res.status(200).end()
-    return
-    }
+  if (req.method === "OPTIONS") {
+    res.status(200).end();
+    return;
+  }
 
   const form = new formidable.IncomingForm();
   form.parse(req, async (err, fields, files) => {
