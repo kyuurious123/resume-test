@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import formidable from "formidable";
 import fs from "fs";
-import pdfParse from "pdf-parse";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 
 export const config = {
   api: {
@@ -34,12 +34,23 @@ export default async function handler(req, res) {
       }
 
       const uploadedFile = files.file;
+      const filePath = uploadedFile?.filepath || uploadedFile[0]?.filepath;
 
-      // ✅ formidable v3에서는 uploadedFile은 배열이 아니라 객체로 나옴
-      const filePath = uploadedFile.filepath || uploadedFile[0]?.filepath;
-      const fileBuffer = fs.readFileSync(filePath);
-      const parsed = await pdfParse(fileBuffer);
-      const resumeText = parsed.text;
+      if (!filePath || !fs.existsSync(filePath)) {
+        res.status(400).json({ error: "PDF 파일을 찾을 수 없습니다." });
+        return;
+      }
+
+      const data = new Uint8Array(fs.readFileSync(filePath));
+      const pdf = await pdfjsLib.getDocument({ data }).promise;
+
+      let text = "";
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map(item => item.str).join(" ");
+        text += pageText + "\n";
+      }
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4",
@@ -51,7 +62,7 @@ export default async function handler(req, res) {
           },
           {
             role: "user",
-            content: resumeText,
+            content: text,
           },
         ],
       });
@@ -59,8 +70,8 @@ export default async function handler(req, res) {
       const feedback = completion.choices[0].message.content;
       res.status(200).json({ result: feedback });
     } catch (e) {
-      console.error("첨삭 처리 실패:", e);
-      res.status(500).json({ error: "GPT 처리 중 오류" });
+      console.error("GPT 처리 실패:", e);
+      res.status(500).json({ error: "서버 내부 오류" });
     }
   });
 }
