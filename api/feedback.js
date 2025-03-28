@@ -34,8 +34,10 @@ export default async function handler(req, res) {
       }
 
       const uploadedFile = files.file;
-      const filePath = uploadedFile?.filepath || uploadedFile[0]?.filepath;
-
+      const filePath = Array.isArray(uploadedFile)
+      ? uploadedFile[0]?.filepath
+      : uploadedFile?.filepath;
+    
       if (!filePath || !fs.existsSync(filePath)) {
         res.status(400).json({ error: "PDF 파일을 찾을 수 없습니다." });
         return;
