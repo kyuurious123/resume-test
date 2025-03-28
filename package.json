@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": ">=16.0.0"
+    "node": "16.x",
+    "npm": "8.x"
   },
   "dependencies": {
     "formidable": "^3.5.2",
     "openai": "^4.10.0",
     "pdf-parse": "^1.1.1"
-  },
-  "devDependencies": {}
+  }
 }
