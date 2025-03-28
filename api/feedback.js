@@ -1,64 +1,62 @@
-import formidable from "formidable"
-import fs from "fs"
-import OpenAI from "openai"
-import PDFParser from "pdf2json"
+import OpenAI from "openai";
+import formidable from "formidable";
+import fs from "fs";
+import pdfParse from "pdf-parse";
 
 export const config = {
   api: {
     bodyParser: false,
   },
-}
+};
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export default async function handler(req, res) {
-  // ✅ CORS 헤더 항상 먼저!
-  res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  // CORS 설정
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // ✅ OPTIONS 요청 빠르게 종료 (Formidable 진입 전!)
   if (req.method === "OPTIONS") {
-    res.status(200).end()
-    return
+    res.status(200).end();
+    return;
   }
 
   if (req.method !== "POST") {
-    res.status(405).json({ error: "Method Not Allowed" })
-    return
+    return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const form = formidable({ multiples: false, keepExtensions: true })
+  const form = formidable({ 
+    multiples: false, 
+    keepExtensions: true 
+  });
 
   form.parse(req, async (err, fields, files) => {
-    if (err) {
-      console.error("파일 파싱 에러:", err)
-      res.status(500).json({ error: "파일 파싱 실패" })
-      return
-    }
-
-    const uploadedFile = files.file
-    const filePath = Array.isArray(uploadedFile)
-      ? uploadedFile[0]?.filepath
-      : uploadedFile?.filepath
-
-    if (!filePath || !fs.existsSync(filePath)) {
-      res.status(400).json({ error: "PDF 파일이 없습니다." })
-      return
-    }
-
     try {
-      const text = await new Promise((resolve, reject) => {
-        const parser = new PDFParser()
+      if (err) {
+        console.error("파일 업로드 오류:", err);
+        return res.status(500).json({ error: "파일 업로드 실패" });
+      }
 
-        parser.on("pdfParser_dataError", err => reject(err.parserError))
-        parser.on("pdfParser_dataReady", pdfData => {
-          resolve(parser.getRawTextContent())
-        })
+      const uploadedFile = files.file;
+      const filePath = uploadedFile?.filepath || uploadedFile[0]?.filepath;
 
-        parser.loadPDF(filePath)
-      })
+      if (!filePath || !fs.existsSync(filePath)) {
+        return res.status(400).json({ error: "PDF 파일을 찾을 수 없습니다." });
+      }
 
+      // PDF 파일 파싱
+      const dataBuffer = fs.readFileSync(filePath);
+      const pdfData = await pdfParse(dataBuffer);
+      const text = pdfData.text;
+
+      if (!text || text.trim().length === 0) {
+        return res.status(400).json({ error: "PDF에서 텍스트를 추출할 수 없습니다." });
+      }
+
+      // OpenAI API를 통한 이력서 첨삭
       const completion = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
@@ -72,13 +70,15 @@ export default async function handler(req, res) {
             content: text,
           },
         ],
-      })
+        temperature: 0.7,
+        max_tokens: 1000,
+      });
 
-      const feedback = completion.choices[0].message.content
-      res.status(200).json({ result: feedback })
-    } catch (e) {
-      console.error("GPT 처리 실패:", e)
-      res.status(500).json({ error: "GPT 처리 실패" })
+      const feedback = completion.choices[0].message.content;
+      return res.status(200).json({ result: feedback });
+    } catch (error) {
+      console.error("처리 오류:", error);
+      return res.status(500).json({ error: "서버 내부 오류", details: error.message });
     }
-  })
+  });
 }

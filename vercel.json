@@ -3,7 +3,7 @@
     "builds": [
       {
         "src": "api/feedback.js",
-        "use": "@vercel/node"
+        "use": "@vercel/node@2.5.10"
       }
     ],
     "routes": [
