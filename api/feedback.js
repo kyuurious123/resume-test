@@ -21,15 +21,16 @@ const openai = new OpenAI({
 });
 
 export default async function handler(req, res) {
-  // CORS 설정
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  // CORS preflight 요청 처리
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+    // CORS 설정 - 모든 도메인 허용 (프레이머 포함)
+    res.setHeader("Access-Control-Allow-Origin", "https://project-fizmmotayn3fhbctn1li.framercanvas.com");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+  
+    // OPTIONS 요청 처리 (preflight 요청)
+    if (req.method === "OPTIONS") {
+      return res.status(200).end();
+    }
 
   // POST 요청만 허용
   if (req.method !== "POST") {
