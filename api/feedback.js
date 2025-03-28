@@ -2,35 +2,25 @@ import formidable from "formidable"
 import fs from "fs"
 import OpenAI from "openai"
 import PDFParser from "pdf2json"
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 export default async function handler(req, res) {
-  // ✅ CORS 헤더
-  res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-
-  // ✅ OPTIONS 요청 대응 (프리플라이트 요청)
-  if (req.method === "OPTIONS") {
-    res.status(200).end()
-    return
-  }
-
-  // ✅ POST만 허용
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method Not Allowed" })
-    return
-  }
-
+    // ✅ CORS 헤더는 어떤 요청이든 항상 보내야 함
+    res.setHeader("Access-Control-Allow-Origin", "*")
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  
+    // ✅ OPTIONS 요청이면 바로 응답
+    if (req.method === "OPTIONS") {
+      res.status(200).end()
+      return
+    }
+  
+    // ✅ POST 요청이 아닌 경우 차단
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Method Not Allowed" })
+      return
+    }
+}
+  
   const form = formidable({ multiples: false, keepExtensions: true })
 
   form.parse(req, async (err, fields, files) => {
