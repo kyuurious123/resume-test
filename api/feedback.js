@@ -2,25 +2,32 @@ import formidable from "formidable"
 import fs from "fs"
 import OpenAI from "openai"
 import PDFParser from "pdf2json"
-export default async function handler(req, res) {
-    // ✅ CORS 헤더는 어떤 요청이든 항상 보내야 함
-    res.setHeader("Access-Control-Allow-Origin", "*")
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-  
-    // ✅ OPTIONS 요청이면 바로 응답
-    if (req.method === "OPTIONS") {
-      res.status(200).end()
-      return
-    }
-  
-    // ✅ POST 요청이 아닌 경우 차단
-    if (req.method !== "POST") {
-      res.status(405).json({ error: "Method Not Allowed" })
-      return
-    }
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
 }
-  
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+export default async function handler(req, res) {
+  // ✅ CORS 헤더 항상 먼저!
+  res.setHeader("Access-Control-Allow-Origin", "*")
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+
+  // ✅ OPTIONS 요청 빠르게 종료 (Formidable 진입 전!)
+  if (req.method === "OPTIONS") {
+    res.status(200).end()
+    return
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method Not Allowed" })
+    return
+  }
+
   const form = formidable({ multiples: false, keepExtensions: true })
 
   form.parse(req, async (err, fields, files) => {
@@ -41,7 +48,6 @@ export default async function handler(req, res) {
     }
 
     try {
-      // ✅ pdf2json을 Promise로 감싸 비동기 흐름 제어
       const text = await new Promise((resolve, reject) => {
         const parser = new PDFParser()
 
@@ -53,7 +59,6 @@ export default async function handler(req, res) {
         parser.loadPDF(filePath)
       })
 
-      // ✅ GPT API 요청
       const completion = await openai.chat.completions.create({
         model: "gpt-4",
         messages: [
