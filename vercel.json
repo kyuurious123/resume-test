@@ -11,6 +11,8 @@
         "src": "/api/(.*)",
         "dest": "api/feedback.js"
       }
+    ],
+    "includeFiles": [
+      "node_modules/pdfjs-dist/**"
     ]
   }
-  
