@@ -3,6 +3,6 @@
   "dependencies": {
     "formidable": "^3.5.0",
     "openai": "^4.0.0",
-    "pdfjs-dist": "^5.0.375"
+    "pdfjs-dist": "^3.4.120"
   }
 }
